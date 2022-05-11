@@ -1,0 +1,34 @@
+create people schema ['ID', 'name', 'age', 'height'] with ['char(20)', 'char(20)', 'int', 'float'], primary_key=ID
+select from people
+select from people
+create student schema ['ID', 'name', 'age'] with ['char(20)', 'char(20)', 'int'], primary_key=None
+create student schema ['ID', 'name', 'age'] with ['char(20)', 'char(20)', 'int'], primary_key=None
+table student all ready exits
+select from student
+select from student
+select from student
+select from student
+select from student
+select from student
+select from student
+select from student
+select from student
+select from student
+select from student
+select from student
+select from student
+select from student
+create people schema ['ID', 'name', 'age', 'height'] with ['char(20)', 'char(20)', 'int', 'float'], primary_key=ID
+drop table people
+create people schema ['ID', 'name', 'age', 'height'] with ['char(20)', 'char(20)', 'int', 'float'], primary_key=ID
+table people all ready exits
+table people all ready exits
+table people all ready exits
+drop table people
+select from student
+select from student
+select from student
+select from student
+select from student
+select from student
+select from student
