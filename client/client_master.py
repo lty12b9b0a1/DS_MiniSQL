@@ -46,7 +46,7 @@ while True:
                 else:
 
                     print(len(tmp))
-                    print_table(tmp)
+                    print_table(tmp[0], tmp[1])
             else:
                 print(tmp[0])
 
