@@ -1,5 +1,7 @@
 from enum import Enum
-
+from http.client import responses
+from pkg_resources import resource_listdir
+import requests
 
 from execption import MiniSQLSyntaxError
 from API import *
@@ -8,6 +10,8 @@ import time
 from flask import Flask, request, jsonify, Response
 from flask_cors import CORS
 
+server_list = []
+rotation_lock = 0
 app = Flask(__name__)
 CORS(app, resources=r'/*')
 
@@ -139,6 +143,100 @@ def main():
 
     buf.close()
 
+def synchronize(ip_port):
+    url = "http://"+ ip_port + "/testfile0"
+    ret = requests.get(url)
+    with open("./testDB/memory/0.block", "wb") as f:
+        f.write(ret.content)
+
+    url = "http://"+ ip_port + "/testfile1"
+    ret = requests.get(url)
+    with open("./testDB/memory/header.hd", "wb") as f:
+        f.write(ret.content)
+        
+    url = "http://"+ ip_port + "/testfile2"
+    ret = requests.get(url)
+    with open("./testDB/catalog/table_schema.minisql", "wb") as f:
+        f.write(ret.content)
+
+    url = "http://"+ ip_port + "/testfile3"
+    ret = requests.get(url)
+    with open("./testDB/log.txt", "wb") as f:
+        f.write(ret.content)
+    
+    return 1
+
+
+def register():
+    formdata = {"ip_port": SELF_IP_PORT}
+    try:
+        server_ip_port_list = requests.get("http://"+CURATOR_IP_PORT+"/register", params=formdata)
+
+        synchronize(server_ip_port_list[0])
+    except Exception as e:
+        print(e)
+
+
+@app.route('/testfile0', methods=['get'])
+def testfile():
+    files = []
+    result = []
+    file = open('./DB/memory/0.block', 'rb')
+    raw = file.read()
+    # raw_str = bytes.decode(raw)
+    # temp = {}
+    # temp["file_content"] = raw_str
+    # result.append(temp.copy())
+    # files.append(raw)
+    # # print(type(files))
+    # # file = open('./DB/memory/header.hd', 'rb')
+    # # raw = file.read()
+    # # files.append(raw)
+    # # file = open('./DB/catalog/table_schema.minisql', 'rb')
+    # # files.append(file)
+    # # file = open('./DB/log.txt', 'rb')
+    # # files.append(file)
+    return Response(raw)
+
+@app.route('/testfile0', methods=['get'])
+def testfile0():
+    file = open('./DB/memory/0.block', 'rb')
+    raw = file.read()
+    return Response(raw)
+
+@app.route('/testfile1', methods=['get'])
+def testfile1():
+    file = open('./DB/memory/header.hd', 'rb')
+    raw = file.read()
+    return Response(raw)
+
+@app.route('/testfile2', methods=['get'])
+def testfile2():
+    file = open('./DB/catalog/table_schema.minisql', 'rb')
+    raw = file.read()
+    return Response(raw)
+
+@app.route('/testfile3', methods=['get'])
+def testfile3():
+    file = open('./DB/log.txt', 'rb')
+    raw = file.read()
+    return Response(raw)
+
+
+@app.route('/heartbeat', methods=['get'])
+def heartbeat():
+    global server_list
+    server_list = request.args.get('server_list')
+    return 1
+
+@app.route('/selectregion', methods=['get'])
+def selectregion():
+    global rotation_lock
+    rotation_lock = rotation_lock + 1
+    if rotation_lock >= len(server_list):
+        rotation_lock = 0
+    return jsonify(server_list[rotation_lock])
+
 
 @app.route('/query', methods=['get'])
 def query():
@@ -166,8 +264,12 @@ def query():
     return jsonify(ret)
 
 if __name__ == '__main__':
-    query = ''
-    buf = Buffer()
-    app.run(host="0.0.0.0", port=23333)
-    buf.close()
+    # query = ''
+    try:
+        # register()
+        buf = Buffer()
+        app.run(host="0.0.0.0", port=SELF_PORT)
+        buf.close()
+    except Exception as e:
+        print(e)
     # main()
