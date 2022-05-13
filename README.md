@@ -12,9 +12,9 @@ region_server主节点写入操作：暂定为   client写入->主节点给所�
 					问题：写入顺序性，若有region写入失败等。
 
 
-reigon_server上线时的文件同步问题。
+- [x] reigon_server上线时的文件同步问题。
 
 
-http通信的传入值和返回值的格式问题：eval函数的使用。
+- [x] http通信的传入值和返回值的格式问题：eval函数的使用。
 
-http通信的阻塞模式和异步模式
+- [x] http通信的阻塞模式和异步模式
