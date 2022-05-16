@@ -4,10 +4,10 @@ from threading import Lock, Thread
 import requests
 from flask import Flask, request, jsonify
 from flask_cors import CORS
+from pynput import keyboard
 
-# Curator维护一个servers.json文件，存放所有节点的地址和是否为主节点信息
-# 例如[{"address": "127.0.0.1:5001", "isMaster": false}]
-# 每10秒一次心跳检测
+# Curator维护一个servers.json文件，存放所有节点的地址和是否为主节点信息，例如[{"address": "127.0.0.1:5001", "isMaster": false}]
+# 每10秒一次心跳检测，按下Esc键退出curator程序
 
 app = Flask(__name__)
 CORS(app, supports_credentials=True)
@@ -49,15 +49,6 @@ def server_online():
         json.dump(servers, json_file)
     write_lock.release()
     return jsonify(servers)
-
-
-# CuratorApp的运行线程
-class AppThread(Thread):
-    def __init__(self):
-        super().__init__()
-
-    def run(self):
-        app.run(host="127.0.0.1", port=5000)
 
 
 # 向对应节点发送请求验证其是否存活
@@ -115,8 +106,42 @@ def pulse():
     write_lock.release()
 
 
+def on_press(key):
+    if key == keyboard.Key.esc:
+        return False
+
+
+# CuratorApp的运行线程
+class AppThread(Thread):
+    def __init__(self):
+        super().__init__()
+
+    def run(self):
+        app.run(host="127.0.0.1", port=5000)
+
+
+# 心跳检测线程
+class HeartThread(Thread):
+    def __init__(self):
+        super().__init__()
+
+    def run(self):
+        time.sleep(1)
+        while True:
+            pulse()
+            time.sleep(10)
+
+
 if __name__ == "__main__":
-    AppThread().start()
-    while 1:
-        pulse()
-        time.sleep(10)
+    print("Curator开始运行，按下Esc键以退出！")
+    print("------------------------------------------------------------")
+    app_thread = AppThread()
+    app_thread.setDaemon(True)
+    app_thread.start()
+    heart_thread = HeartThread()
+    heart_thread.setDaemon(True)
+    heart_thread.start()
+    while True:
+        with keyboard.Listener(on_press=on_press) as listener:
+            listener.join()
+            break
