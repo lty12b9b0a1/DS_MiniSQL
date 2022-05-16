@@ -7,6 +7,7 @@ from execption import MiniSQLSyntaxError
 from API import *
 from buffer_manager import *
 import time
+import json
 from flask import Flask, request, jsonify, Response
 from flask_cors import CORS
 
@@ -227,7 +228,7 @@ def testfile3():
 def heartbeat():
     global server_list
     server_list = request.args.get('server_list')
-    return 1
+    return json.dumps(1)
 
 @app.route('/selectregion', methods=['get'])
 def selectregion():

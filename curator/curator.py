@@ -2,7 +2,7 @@ import json
 import time
 from threading import Lock, Thread
 import requests
-from flask import Flask, request
+from flask import Flask, request, jsonify
 from flask_cors import CORS
 
 # Curator维护一个servers.json文件，存放所有节点的地址和是否为主节点信息
@@ -48,7 +48,7 @@ def server_online():
     with open("servers.json", "w") as json_file:
         json.dump(servers, json_file)
     write_lock.release()
-    return json.dumps("服务器上线成功", ensure_ascii=False)
+    return jsonify(servers)
 
 
 # CuratorApp的运行线程
@@ -73,7 +73,9 @@ class PulseThread(Thread):
         global current_master
         try:
             url = "http://" + self.address + "/heartbeat"
-            response = requests.get(url=url, timeout=5)
+            with open("servers.json", "r") as json_file:
+                servers = {"server_list": json.load(json_file)}
+            response = requests.get(url=url, params=servers, timeout=5)
             # 返回值为数字即视为存活
             if response.content.decode("utf-8").isdigit():
                 new_server = {"address": self.address, "isMaster": self.is_master}
