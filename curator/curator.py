@@ -48,7 +48,7 @@ def server_online():
     with open("servers.json", "w") as json_file:
         json.dump(servers, json_file)
     write_lock.release()
-    return jsonify(servers)
+    return json.dumps(servers)
 
 
 # 向对应节点发送请求验证其是否存活
@@ -65,15 +65,18 @@ class PulseThread(Thread):
         try:
             url = "http://" + self.address + "/heartbeat"
             with open("servers.json", "r") as json_file:
-                servers = {"server_list": json.load(json_file)}
-            response = requests.get(url=url, params=servers, timeout=5)
+                servers = {"server_list": json.dumps(json.load(json_file))}
+            
+            # print(servers)
+            response = requests.get(url=url, params=servers, timeout=3)
             # 返回值为数字即视为存活
             if response.content.decode("utf-8").isdigit():
                 new_server = {"address": self.address, "isMaster": self.is_master}
                 self.lock.acquire()
                 new_servers.append(new_server)
                 self.lock.release()
-        except:
+        except Exception as e:
+            print(e)
             if self.is_master:
                 current_master = None
 
