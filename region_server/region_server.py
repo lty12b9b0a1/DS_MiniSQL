@@ -1,4 +1,5 @@
 from enum import Enum
+from http import server
 from http.client import responses
 from pkg_resources import resource_listdir
 import requests
@@ -13,6 +14,11 @@ from flask_cors import CORS
 
 server_list = []
 rotation_lock = 0
+
+import logging
+log = logging.getLogger('werkzeug')
+log.setLevel(logging.ERROR)
+
 app = Flask(__name__)
 CORS(app, resources=r'/*')
 
@@ -147,57 +153,38 @@ def main():
 def synchronize(ip_port):
     url = "http://"+ ip_port + "/testfile0"
     ret = requests.get(url)
-    with open("./testDB/memory/0.block", "wb") as f:
+    with open("./DB/memory/0.block", "wb") as f:
         f.write(ret.content)
 
     url = "http://"+ ip_port + "/testfile1"
     ret = requests.get(url)
-    with open("./testDB/memory/header.hd", "wb") as f:
+    with open("./DB/memory/header.hd", "wb") as f:
         f.write(ret.content)
         
     url = "http://"+ ip_port + "/testfile2"
     ret = requests.get(url)
-    with open("./testDB/catalog/table_schema.minisql", "wb") as f:
+    with open("./DB/catalog/table_schema.minisql", "wb") as f:
         f.write(ret.content)
 
     url = "http://"+ ip_port + "/testfile3"
     ret = requests.get(url)
-    with open("./testDB/log.txt", "wb") as f:
+    with open("./DB/log.txt", "wb") as f:
         f.write(ret.content)
     
     return 1
 
 
 def register():
+    global server_list
     formdata = {"ip_port": SELF_IP_PORT}
     try:
-        server_ip_port_list = requests.get("http://"+CURATOR_IP_PORT+"/register", params=formdata)
-
-        synchronize(server_ip_port_list[0])
+        tmpserver_ip_port_list = requests.get("http://"+CURATOR_IP_PORT+"/register", params=formdata)
+        server_list = json.loads(tmpserver_ip_port_list.content)
+        if server_list[0]["address"] != SELF_IP_PORT:
+            synchronize(server_list[0]["address"])
     except Exception as e:
         print(e)
 
-
-@app.route('/testfile0', methods=['get'])
-def testfile():
-    files = []
-    result = []
-    file = open('./DB/memory/0.block', 'rb')
-    raw = file.read()
-    # raw_str = bytes.decode(raw)
-    # temp = {}
-    # temp["file_content"] = raw_str
-    # result.append(temp.copy())
-    # files.append(raw)
-    # # print(type(files))
-    # # file = open('./DB/memory/header.hd', 'rb')
-    # # raw = file.read()
-    # # files.append(raw)
-    # # file = open('./DB/catalog/table_schema.minisql', 'rb')
-    # # files.append(file)
-    # # file = open('./DB/log.txt', 'rb')
-    # # files.append(file)
-    return Response(raw)
 
 @app.route('/testfile0', methods=['get'])
 def testfile0():
@@ -227,7 +214,11 @@ def testfile3():
 @app.route('/heartbeat', methods=['get'])
 def heartbeat():
     global server_list
-    server_list = request.args.get('server_list')
+    tmpserver_list = request.args.get('server_list')
+    # print(server_list)
+    # print(json.loads(server_list)[0])
+    server_list = json.loads(tmpserver_list)
+    print(server_list)
     return json.dumps(1)
 
 @app.route('/selectregion', methods=['get'])
@@ -236,7 +227,7 @@ def selectregion():
     rotation_lock = rotation_lock + 1
     if rotation_lock >= len(server_list):
         rotation_lock = 0
-    return jsonify(server_list[rotation_lock])
+    return json.dumps(server_list[rotation_lock])
 
 
 @app.route('/query', methods=['get'])
@@ -267,7 +258,7 @@ def query():
 if __name__ == '__main__':
     # query = ''
     try:
-        # register()
+        register()
         buf = Buffer()
         app.run(host="0.0.0.0", port=SELF_PORT)
         buf.close()
