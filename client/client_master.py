@@ -2,6 +2,8 @@ from enum import Enum
 from operator import le
 import requests
 
+from region_server.execption import MiniSQLSyntaxError
+
 MiniSQLType = Enum('MiniSQLType', ('CREATE_TABLE', 'INSERT', 'DROP_TABLE', 'CREATE_INDEX',
                                    'DROP_INDEX', 'SELECT', 'DELETE', 'QUIT', 'EXECFILE', 'CLEAR'))
 
@@ -30,7 +32,7 @@ def judge_type(query):
             return MiniSQLType.DROP_INDEX
     elif query[0] == 'clear':
         return MiniSQLType.CLEAR
-
+    raise MiniSQLSyntaxError('Error Type')
 
 def print_table(records, cols):
     col_width = 15
@@ -66,12 +68,14 @@ while True:
         # print("???")
         # print(query)
         formdata = {'query': query}
+        querytype = judge_type(query)
+        # print(querytype)
         query = ''
         try:
             ret_master_url = requests.get(curator_url + "/getMaster")
             master_url = eval(ret_master_url.text)
-            if judge_type(query) == MiniSQLType.SELECT:
-                ret_region = requests.get("http://"+ master_url + "/selectregion")
+            if querytype == MiniSQLType.SELECT:
+                ret_region = requests.get("http://" + master_url + "/selectregion")
                 ret_region_json = ret_region.json()
                 region_url = ret_region_json['address']
 
@@ -95,6 +99,5 @@ while True:
                 print(tmp[0])
 
         except Exception as e:
-            # print("ok")
-            # print(e)
-            1
+            print(e)
+
