@@ -2,7 +2,6 @@ from enum import Enum
 from operator import le
 import requests
 
-
 MiniSQLType = Enum('MiniSQLType', ('CREATE_TABLE', 'INSERT', 'DROP_TABLE', 'CREATE_INDEX',
                                    'DROP_INDEX', 'SELECT', 'DELETE', 'QUIT', 'EXECFILE', 'CLEAR', 'ERROR_TYPE'))
 
@@ -33,6 +32,7 @@ def judge_type(query):
         return MiniSQLType.CLEAR
 
     return MiniSQLType.ERROR_TYPE
+
 
 def print_table(records, cols):
     col_width = 15
@@ -84,7 +84,7 @@ while True:
                 ret = requests.get("http://" + master_url + "/query", params=formdata)
 
             else:
-                raise SyntaxError("Syntax Error: Unrecognised Type")
+                raise TypeError("Syntax Error: Unrecognised Type")
 
             tmp = eval(ret.content.strip())
             # print(tmp)
@@ -101,6 +101,5 @@ while True:
             else:
                 print(tmp[0])
 
-        except SyntaxError as e:
+        except TypeError as e:
             print(e)
-
