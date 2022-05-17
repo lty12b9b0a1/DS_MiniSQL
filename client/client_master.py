@@ -66,15 +66,15 @@ while True:
         try:
             ret_master_url = requests.get(curator_url + "/getMaster")
             master_url = eval(ret_master_url.text)
-            #if judge_type(query) == MiniSQLType.SELECT:
-            ret_region = requests.get("http://"+ master_url + "/selectregion")
-            ret_region_json = ret_region.json()
-            region_url = ret_region_json['address']
+            if judge_type(query) == MiniSQLType.SELECT:
+                ret_region = requests.get("http://"+ master_url + "/selectregion")
+                ret_region_json = ret_region.json()
+                region_url = ret_region_json['address']
 
-            ret = requests.get("http://" + region_url + "/query", params=formdata)
-            #else:
-            #    ret = requests.get(master_url + "query", params=formdata)
-            #    print("a")
+                ret = requests.get("http://" + region_url + "/query", params=formdata)
+            else:
+                ret = requests.get("http://" + master_url + "/query", params=formdata)
+                print("a")
             tmp = eval(ret.content.strip())
             # print(tmp)
             if tmp == 0:
