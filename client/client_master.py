@@ -2,10 +2,9 @@ from enum import Enum
 from operator import le
 import requests
 
-from region_server.execption import MiniSQLSyntaxError
 
 MiniSQLType = Enum('MiniSQLType', ('CREATE_TABLE', 'INSERT', 'DROP_TABLE', 'CREATE_INDEX',
-                                   'DROP_INDEX', 'SELECT', 'DELETE', 'QUIT', 'EXECFILE', 'CLEAR'))
+                                   'DROP_INDEX', 'SELECT', 'DELETE', 'QUIT', 'EXECFILE', 'CLEAR', 'ERROR_TYPE'))
 
 
 def judge_type(query):
@@ -32,7 +31,8 @@ def judge_type(query):
             return MiniSQLType.DROP_INDEX
     elif query[0] == 'clear':
         return MiniSQLType.CLEAR
-    raise MiniSQLSyntaxError('Error Type')
+
+    return MiniSQLType.ERROR_TYPE
 
 def print_table(records, cols):
     col_width = 15
@@ -80,9 +80,12 @@ while True:
                 region_url = ret_region_json['address']
 
                 ret = requests.get("http://" + region_url + "/query", params=formdata)
-            else:
+            elif querytype != MiniSQLType.ERROR_TYPE:
                 ret = requests.get("http://" + master_url + "/query", params=formdata)
-                print("a")
+
+            else:
+                raise SyntaxError("Syntax Error: Unrecognised Type")
+
             tmp = eval(ret.content.strip())
             # print(tmp)
             if tmp == 0:
@@ -98,6 +101,6 @@ while True:
             else:
                 print(tmp[0])
 
-        except Exception as e:
+        except SyntaxError as e:
             print(e)
 
