@@ -1,5 +1,35 @@
+from enum import Enum
 from operator import le
 import requests
+
+MiniSQLType = Enum('MiniSQLType', ('CREATE_TABLE', 'INSERT', 'DROP_TABLE', 'CREATE_INDEX',
+                                   'DROP_INDEX', 'SELECT', 'DELETE', 'QUIT', 'EXECFILE', 'CLEAR'))
+
+
+def judge_type(query):
+    query = query.lower().strip(';\n ').split()
+    if query[0] == 'insert':
+        return MiniSQLType.INSERT
+    elif query[0] == 'select':
+        return MiniSQLType.SELECT
+    elif query[0] == 'delete':
+        return MiniSQLType.DELETE
+    elif query[0] in ['quit', 'exit']:
+        return MiniSQLType.QUIT
+    elif query[0] == 'execfile':
+        return MiniSQLType.EXECFILE
+    elif query[0] == 'create':
+        if query[1] == 'table':
+            return MiniSQLType.CREATE_TABLE
+        elif query[1] == 'index':
+            return MiniSQLType.CREATE_INDEX
+    elif query[0] == 'drop':
+        if query[1] == 'table':
+            return MiniSQLType.DROP_TABLE
+        elif query[1] == 'index':
+            return MiniSQLType.DROP_INDEX
+    elif query[0] == 'clear':
+        return MiniSQLType.CLEAR
 
 
 def print_table(records, cols):
@@ -16,15 +46,17 @@ def print_table(records, cols):
     print(bound)
 
 
-
 url = "http://127.0.0.1:23333/query"
+
+curator_url = "http://127.0.0.1:5000"
+
 query = ''
 while True:
     print('MiniSQL->', end=' ')
     cmd = input()
     query += cmd + ' '
     cmd = cmd.strip()
-    
+
     if cmd and cmd[-1] == ';':
         # print(query)
         # print("???")
@@ -32,9 +64,17 @@ while True:
         formdata = {'query': query}
         query = ''
         try:
-            ret = requests.get(url, params=formdata)
+            ret_master_url = requests.get(curator_url + "/getMaster")
+            master_url = eval(ret_master_url.text)
+            #if judge_type(query) == MiniSQLType.SELECT:
+            ret_region = requests.get("http://"+ master_url + "/selectregion")
+            ret_region_json = ret_region.json()
+            region_url = ret_region_json['address']
 
-
+            ret = requests.get("http://" + region_url + "/query", params=formdata)
+            #else:
+            #    ret = requests.get(master_url + "query", params=formdata)
+            #    print("a")
             tmp = eval(ret.content.strip())
             # print(tmp)
             if tmp == 0:
