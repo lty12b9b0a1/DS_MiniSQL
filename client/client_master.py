@@ -54,6 +54,10 @@ query = ''
 while True:
     print('MiniSQL->', end=' ')
     cmd = input()
+
+    if cmd == "exit":
+        break
+
     query += cmd + ' '
     cmd = cmd.strip()
 
