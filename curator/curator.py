@@ -73,7 +73,8 @@ class PulseThread(Thread):
                 self.lock.acquire()
                 new_servers.append(new_server)
                 self.lock.release()
-        except:
+        except Exception as e:
+            print(e)
             if self.is_master:
                 current_master = None
 
