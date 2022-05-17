@@ -2,7 +2,7 @@ import json
 import time
 from threading import Lock, Thread
 import requests
-from flask import Flask, request, jsonify
+from flask import Flask, request
 from flask_cors import CORS
 from pynput import keyboard
 
@@ -19,8 +19,7 @@ write_lock = Lock()
 @app.route("/")
 def hello_world():
     print(request.remote_addr)
-    user = request.args.get("key")
-    return "<p>hello,{}!<p>".format(user)
+    return "<p>hello,world!<p>"
 
 
 # 通过此接口获取主节点，格式为"ip:port"
@@ -65,18 +64,16 @@ class PulseThread(Thread):
         try:
             url = "http://" + self.address + "/heartbeat"
             with open("servers.json", "r") as json_file:
+                # 注意此处传递字典的值为字典列表，需要序列化
                 servers = {"server_list": json.dumps(json.load(json_file))}
-            
-            # print(servers)
-            response = requests.get(url=url, params=servers, timeout=3)
+            response = requests.get(url=url, params=servers, timeout=5)
             # 返回值为数字即视为存活
             if response.content.decode("utf-8").isdigit():
                 new_server = {"address": self.address, "isMaster": self.is_master}
                 self.lock.acquire()
                 new_servers.append(new_server)
                 self.lock.release()
-        except Exception as e:
-            print(e)
+        except:
             if self.is_master:
                 current_master = None
 
@@ -96,22 +93,17 @@ def pulse():
             pulse_thread = PulseThread(is_master, address, lock)
             pulse_thread.start()
             pulse_thread.join()
-        print(new_servers)
-        # 当前无主节点时选择新的主节点：new_servers列表中第一个连接数小于5的节点
-        if current_master is None and len(new_servers) >= 0:
+        # 当前无主节点时选择新的主节点：new_servers列表中的第一个节点
+        if current_master is None and len(new_servers) > 0:
             for server in new_servers:
                 server["isMaster"] = True
                 current_master = server["address"]
                 break
+        print("当前的节点列表：" + str(new_servers))
     write_lock.acquire()
     with open("servers.json", "w") as json_file:
         json.dump(new_servers, json_file)
     write_lock.release()
-
-
-def on_press(key):
-    if key == keyboard.Key.esc:
-        return False
 
 
 # CuratorApp的运行线程
@@ -135,6 +127,11 @@ class HeartThread(Thread):
             time.sleep(10)
 
 
+def on_press(key):
+    if key == keyboard.Key.esc:
+        return False
+
+
 if __name__ == "__main__":
     print("Curator开始运行，按下Esc键以退出！")
     print("------------------------------------------------------------")
@@ -148,3 +145,4 @@ if __name__ == "__main__":
         with keyboard.Listener(on_press=on_press) as listener:
             listener.join()
             break
+    print("Curator已安全退出！")
