@@ -9,6 +9,10 @@ from pynput import keyboard
 # Curator维护一个servers.json文件，存放所有节点的地址和是否为主节点信息，例如[{"address": "127.0.0.1:5001", "isMaster": false}]
 # 每10秒一次心跳检测，按下Esc键退出curator程序
 
+import logging
+log = logging.getLogger('werkzeug')
+log.setLevel(logging.ERROR)
+
 app = Flask(__name__)
 CORS(app, supports_credentials=True)
 new_servers = []
@@ -35,6 +39,26 @@ def get_server():
         return json.dumps(json.load(json_file))
 
 
+# 节点登出
+@app.route("/signout")
+def signout():
+    global write_lock
+    servers = []
+    with open("servers.json", "r") as json_file:
+        servers = json.load(json_file)
+        address = request.args.get("ip_port")
+        if {"address": address, "isMaster": False} in servers:
+            del servers[servers.index({"address": address, "isMaster": False})]
+        if {"address": address, "isMaster": True} in servers:
+            del servers[servers.index({"address": address, "isMaster": True})]
+    write_lock.acquire()
+    with open("servers.json", "w") as json_file:
+        json.dump(servers, json_file)
+    write_lock.release()
+    print("节点登出:", address)
+    return json.dumps(servers)
+
+
 # 通过此接口向Curator上线新的节点，调用时需要传递参数
 @app.route("/register")
 def server_online():
@@ -47,6 +71,7 @@ def server_online():
     with open("servers.json", "w") as json_file:
         json.dump(servers, json_file)
     write_lock.release()
+    print("新节点注册:", address)
     return json.dumps(servers)
 
 
@@ -66,7 +91,7 @@ class PulseThread(Thread):
             with open("servers.json", "r") as json_file:
                 # 注意此处传递字典的值为字典列表，需要序列化
                 servers = {"server_list": json.dumps(json.load(json_file))}
-            response = requests.get(url=url, params=servers, timeout=5)
+            response = requests.get(url=url, params=servers, timeout=2)
             # 返回值为数字即视为存活
             if response.content.decode("utf-8").isdigit():
                 new_server = {"address": self.address, "isMaster": self.is_master}
@@ -125,13 +150,17 @@ class HeartThread(Thread):
         time.sleep(1)
         while True:
             pulse()
-            time.sleep(10)
+            time.sleep(3)
 
 
 def on_press(key):
     if key == keyboard.Key.esc:
         return False
 
+def clearserver():
+    servers = []
+    with open("servers.json", "w") as json_file:
+        json.dump(servers, json_file)
 
 if __name__ == "__main__":
     print("Curator开始运行，按下Esc键以退出！")
@@ -146,4 +175,5 @@ if __name__ == "__main__":
         with keyboard.Listener(on_press=on_press) as listener:
             listener.join()
             break
+    clearserver()
     print("Curator已安全退出！")

@@ -1,8 +1,7 @@
 from enum import Enum
-from http import server
-from http.client import responses
-from pkg_resources import resource_listdir
 import requests
+from threading import Lock, Thread
+
 
 from execption import MiniSQLSyntaxError
 from API import *
@@ -13,6 +12,7 @@ from flask import Flask, request, jsonify, Response
 from flask_cors import CORS
 
 server_list = []
+server_lock_list = []
 rotation_lock = 0
 
 import logging
@@ -176,12 +176,35 @@ def synchronize(ip_port):
 
 def register():
     global server_list
+    global server_lock_list
     formdata = {"ip_port": SELF_IP_PORT}
     try:
         tmpserver_ip_port_list = requests.get("http://"+CURATOR_IP_PORT+"/register", params=formdata)
-        server_list = json.loads(tmpserver_ip_port_list.content)
+        new_server_list = json.loads(tmpserver_ip_port_list.content)
+
+        new_server_lock_list = []
+        for i in range(len(new_server_list)):
+            if new_server_list[i] in server_list:
+                new_server_lock_list.append(server_lock_list[server_list.index(new_server_list[i])])
+            else:
+                new_server_lock_list.append(0)
+        server_lock_list = new_server_lock_list
+        server_list = new_server_list
+
+
+
         if server_list[0]["address"] != SELF_IP_PORT:
             synchronize(server_list[0]["address"])
+        return 1
+    except Exception as e:
+        return 0
+        
+
+def signout():
+    formdata = {"ip_port": SELF_IP_PORT}
+    try:
+        requests.get("http://"+CURATOR_IP_PORT+"/signout", params=formdata)
+        print("节点退出")
     except Exception as e:
         print(e)
 
@@ -214,54 +237,112 @@ def testfile3():
 @app.route('/heartbeat', methods=['get'])
 def heartbeat():
     global server_list
+    global server_lock_list
     tmpserver_list = request.args.get('server_list')
     # print(server_list)
     # print(json.loads(server_list)[0])
-    server_list = json.loads(tmpserver_list)
-    print(server_list)
+    new_server_list = json.loads(tmpserver_list)
+    new_server_lock_list = []
+    for i in range(len(new_server_list)):
+        if new_server_list[i] in server_list:
+            new_server_lock_list.append(server_lock_list[server_list.index(new_server_list[i])])
+        else:
+            new_server_lock_list.append(0)
+    server_lock_list = new_server_lock_list
+    server_list = new_server_list
+
+    print("~pulse~ 当前的节点列表：", server_list)
     return json.dumps(1)
 
 @app.route('/selectregion', methods=['get'])
 def selectregion():
     global rotation_lock
-    rotation_lock = rotation_lock + 1
-    if rotation_lock >= len(server_list):
-        rotation_lock = 0
-    return json.dumps(server_list[rotation_lock])
+    orgin_lock = rotation_lock
+    while 1:
+        rotation_lock = rotation_lock + 1
+        if rotation_lock >= len(server_list):
+            rotation_lock = 0
+        if server_lock_list[rotation_lock] == 0:
+            return json.dumps(server_list[rotation_lock])
+        if rotation_lock == orgin_lock:
+            break
+
+    return json.dumps("error: no region availible!")
 
 
-@app.route('/query', methods=['get'])
-def query():
+def ismaster():
+    global server_list
+    for i in server_list:
+        if i["address"] == SELF_IP_PORT:
+            if i["isMaster"] == True:
+                return 1
+            else:
+                return 0
+
+
+# 向所有节点广播写入信息
+class WqueryThread(Thread):
+    def __init__(self):
+        super(WqueryThread, self).__init__()
+        
+    def run(self):
+        try:
+            1
+        except Exception as e:
+            print(e)
+
+
+@app.route('/wquery', methods=['get'])
+def wquery():
+    if ismaster() == 0:
+        return jsonify("master changed!")
+    query = request.args.get('query')
+    print(query)
+    global server_list
+    global server_lock_list
+    server_lock_list[ server_lock_list == 0] = 1
+    for i in server_list:
+        if i["address"] != SELF_IP_PORT:
+            1
+
+
+@app.route('/query_broadcast')
+def query_broadcast():
     query = request.args.get('query')
     print(query)
     try:
         beg = time.clock()
         ret = interpret(query, buf)
         end = time.clock()
-
-        # if ret == 0:
-        #     break
-        # elif isinstance(ret, (list, tuple)):
-        #     print_table(*ret)
-        # print(ret)
         print(ret)
     except MiniSQLError as e:
-        # ret = e
-        # print(e.args)
         return jsonify(e.args)
-        end = beg
     query = ''
 
     print('use time {}s'.format(end - beg))
     return jsonify(ret)
 
+@app.route('/testsleep')
+def testsleep():
+    x = 0
+    while 1:
+        x = x + 1
+        if x >= 1000000000:
+            break
+    
+    return 0
+
+
 if __name__ == '__main__':
     # query = ''
     try:
-        register()
-        buf = Buffer()
-        app.run(host="0.0.0.0", port=SELF_PORT)
-        buf.close()
+        if register() == 1:
+            buf = Buffer()
+            app.run(host="0.0.0.0", port=SELF_PORT)
+            buf.close()
+            signout()
+        else:
+            print("register failed!")
     except Exception as e:
         print(e)
     # main()
