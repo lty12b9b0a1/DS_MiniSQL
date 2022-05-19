@@ -10,6 +10,7 @@ from pynput import keyboard
 # 每10秒一次心跳检测，按下Esc键退出curator程序
 
 import logging
+
 log = logging.getLogger('werkzeug')
 log.setLevel(logging.ERROR)
 
@@ -110,6 +111,7 @@ def pulse():
     global current_master
     global write_lock
     new_servers = []
+    thread_list = []
     with open("servers.json", "r") as json_file:
         servers = json.load(json_file)
         lock = Lock()
@@ -118,7 +120,9 @@ def pulse():
             address = server["address"]
             pulse_thread = PulseThread(is_master, address, lock)
             pulse_thread.start()
-            pulse_thread.join()
+            thread_list.append(pulse_thread)
+        for thread in thread_list:
+            thread.join()
         # 当前无主节点时选择新的主节点：new_servers列表中的第一个节点
         if current_master is None and len(new_servers) > 0:
             for server in new_servers:
@@ -153,14 +157,16 @@ class HeartThread(Thread):
             time.sleep(3)
 
 
+def clear_server():
+    servers = []
+    with open("servers.json", "w") as json_file:
+        json.dump(servers, json_file)
+
+
 def on_press(key):
     if key == keyboard.Key.esc:
         return False
 
-def clearserver():
-    servers = []
-    with open("servers.json", "w") as json_file:
-        json.dump(servers, json_file)
 
 if __name__ == "__main__":
     print("Curator开始运行，按下Esc键以退出！")
@@ -175,5 +181,5 @@ if __name__ == "__main__":
         with keyboard.Listener(on_press=on_press) as listener:
             listener.join()
             break
-    clearserver()
+    clear_server()
     print("Curator已安全退出！")
