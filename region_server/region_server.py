@@ -1,6 +1,7 @@
 from enum import Enum
+from glob import glob
 import requests
-from threading import Lock, Thread
+from threading import Lock, Thread, Event
 
 
 from execption import MiniSQLSyntaxError
@@ -13,6 +14,7 @@ from flask_cors import CORS
 
 server_list = []
 server_lock_list = []
+server_real_lock_list = []
 rotation_lock = 0
 
 import logging
@@ -177,6 +179,7 @@ def synchronize(ip_port):
 def register():
     global server_list
     global server_lock_list
+    global server_real_lock_list
     formdata = {"ip_port": SELF_IP_PORT}
     try:
         tmpserver_ip_port_list = requests.get("http://"+CURATOR_IP_PORT+"/register", params=formdata)
@@ -188,6 +191,9 @@ def register():
                 new_server_lock_list.append(server_lock_list[server_list.index(new_server_list[i])])
             else:
                 new_server_lock_list.append(0)
+            newlock = Lock()
+            server_real_lock_list.append(newlock)
+
         server_lock_list = new_server_lock_list
         server_list = new_server_list
 
@@ -238,18 +244,24 @@ def testfile3():
 def heartbeat():
     global server_list
     global server_lock_list
+    global server_real_lock_list
     tmpserver_list = request.args.get('server_list')
     # print(server_list)
     # print(json.loads(server_list)[0])
     new_server_list = json.loads(tmpserver_list)
     new_server_lock_list = []
+    new_server_real_lock_list = []
     for i in range(len(new_server_list)):
         if new_server_list[i] in server_list:
             new_server_lock_list.append(server_lock_list[server_list.index(new_server_list[i])])
+            new_server_real_lock_list.append(server_real_lock_list[server_list.index(new_server_list[i])])
         else:
             new_server_lock_list.append(0)
+            newlock = Lock()
+            new_server_real_lock_list.append(newlock)
     server_lock_list = new_server_lock_list
     server_list = new_server_list
+    server_real_lock_list = new_server_real_lock_list
 
     print("~pulse~ 当前的节点列表：", server_list)
     return json.dumps(1)
@@ -282,28 +294,75 @@ def ismaster():
 
 # 向所有节点广播写入信息
 class WqueryThread(Thread):
-    def __init__(self):
+    def __init__(self, id, query, address, lock, success, failed):
         super(WqueryThread, self).__init__()
-        
+        self.id = id
+        self.address = address
+        self.query = query
+        self.lock = lock
+        self.success = success
+        self.failed = failed
     def run(self):
+        global server_list
+        global server_lock_list
+        global server_real_lock_list
+
+        server_lock_list[i] = 1
+        server_real_lock_list[self.id].acquire()
         try:
-            1
+            url = "http://" + self.address + "/query_broadcast"
+            response = requests.get(url=url, params=self.query, timeout=1)
+            # 返回值为数字即视为存活
+            if response.content == 1:
+                self.success.append(self.id)
+            else:
+                self.failed.append(self.id)
+
         except Exception as e:
             print(e)
+            self.failed.append(self.id)
+        
+        if len(self.success) >= W_SUCCESS_THRESHOLD or len(self.failed) >= len(server_list) - W_SUCCESS_THRESHOLD:
+            self.lock.set()
+        
+        self.lock.wait()
+        
+        if response.content == 1 and len(self.success) < W_SUCCESS_THRESHOLD:
+            synchronize(server_list[self.failed[0]]["address"])
+        if response.content == 0 and len(self.success) >= W_SUCCESS_THRESHOLD:
+            synchronize(server_list[self.success[0]]["address"])
+        
+        server_lock_list[self.id] = 0
+        server_real_lock_list[self.id].release()
 
+
+write_lock = Lock()
 
 @app.route('/wquery', methods=['get'])
 def wquery():
+    finish = Event()
+    success_num = []
+    failed_num = []
+    global write_lock
     if ismaster() == 0:
         return jsonify("master changed!")
     query = request.args.get('query')
     print(query)
     global server_list
     global server_lock_list
-    server_lock_list[ server_lock_list == 0] = 1
-    for i in server_list:
-        if i["address"] != SELF_IP_PORT:
-            1
+    write_lock.acquire()
+
+    finish.clear()
+    for i in range(len(server_list)):
+        pulse_thread = WqueryThread(server_list[i]["address"], query, finish, success_num, failed_num)
+        pulse_thread.start()
+    
+    finish.wait()
+    write_lock.release()
+    if len(success_num) >= W_SUCCESS_THRESHOLD:
+        return "1"
+    else:
+        return "0"
 
 
 @app.route('/query_broadcast')
@@ -319,7 +378,7 @@ def query_broadcast():
         return jsonify(e.args)
     query = ''
 
-    print('use time {}s'.format(end - beg))
+    # print('use time {}s'.format(end - beg))
     return jsonify(ret)
 
 @app.route('/testsleep')
