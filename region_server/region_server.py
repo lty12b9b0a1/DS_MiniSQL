@@ -152,6 +152,12 @@ def main():
 
     buf.close()
 
+
+@app.route('/synchronize_q', methods=['get'])
+def synchronize_q():
+    ip_port = request.args.get('ip_port')
+    synchronize(ip_port)
+
 def synchronize(ip_port):
     url = "http://"+ ip_port + "/testfile0"
     ret = requests.get(url)
@@ -294,7 +300,7 @@ def ismaster():
 
 # 向所有节点广播写入信息
 class WqueryThread(Thread):
-    def __init__(self, id, query, address, lock, success, failed):
+    def __init__(self, id, query, address, lock, success, failed, update_lock):
         super(WqueryThread, self).__init__()
         self.id = id
         self.address = address
@@ -302,6 +308,7 @@ class WqueryThread(Thread):
         self.lock = lock
         self.success = success
         self.failed = failed
+        self.update_lock = update_lock
     def run(self):
         global server_list
         global server_lock_list
@@ -314,23 +321,35 @@ class WqueryThread(Thread):
             response = requests.get(url=url, params=self.query, timeout=1)
             # 返回值为数字即视为存活
             if response.content == 1:
+                self.update_lock.acquire()
                 self.success.append(self.id)
+                self.update_lock.release()
             else:
+                self.update_lock.acquire()
                 self.failed.append(self.id)
+                self.update_lock.release()
 
         except Exception as e:
             print(e)
+            self.update_lock.acquire()
             self.failed.append(self.id)
+            self.update_lock.release()
         
         if len(self.success) >= W_SUCCESS_THRESHOLD or len(self.failed) >= len(server_list) - W_SUCCESS_THRESHOLD:
+            self.update_lock.acquire()
             self.lock.set()
+            self.update_lock.release()
         
         self.lock.wait()
         
         if response.content == 1 and len(self.success) < W_SUCCESS_THRESHOLD:
-            synchronize(server_list[self.failed[0]]["address"])
+            formdata = {"ip_port": server_list[self.failed[0]]["address"]}
+            url = "http://" + self.address + "/synchronize_q"
+            response = requests.get(url=url, params=formdata, timeout=1)
         if response.content == 0 and len(self.success) >= W_SUCCESS_THRESHOLD:
-            synchronize(server_list[self.success[0]]["address"])
+            formdata = {"ip_port": server_list[self.success[0]]["address"]}
+            url = "http://" + self.address + "/synchronize_q"
+            response = requests.get(url=url, params=formdata, timeout=1)
         
         server_lock_list[self.id] = 0
         server_real_lock_list[self.id].release()
@@ -353,8 +372,9 @@ def wquery():
     write_lock.acquire()
 
     finish.clear()
+    update_lock = Lock()
     for i in range(len(server_list)):
-        pulse_thread = WqueryThread(server_list[i]["address"], query, finish, success_num, failed_num)
+        pulse_thread = WqueryThread(server_list[i]["address"], query, finish, success_num, failed_num, update_lock)
         pulse_thread.start()
     
     finish.wait()
