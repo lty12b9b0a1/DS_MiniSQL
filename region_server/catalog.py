@@ -36,7 +36,7 @@ def create_index(index_name, table, col, buf):
     if table in schemas:
         schema = schemas[table]
     else:
-        raise MiniSQLError('table {} does not exit'.format(table))
+        raise MiniSQLError('table {} does not exist'.format(table))
 
     index_file = index_file_prefix.format(index_name)
     if os.path.exists(index_file):
@@ -107,7 +107,7 @@ def drop_table(table, buf):
 
         log('drop table {}'.format(table))
     else:
-        raise MiniSQLError('table {} does not exit'.format(table))
+        raise MiniSQLError('table {} does not exist'.format(table))
 
 
 def convert_type(t):

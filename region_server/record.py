@@ -14,7 +14,7 @@ def insert(table, values, buf):
     if table in schemas:
         schema = schemas[table]
     else:
-        raise MiniSQLError('table {} does not exit'.format(table))
+        raise MiniSQLError('table {} does not exist'.format(table))
 
     record = []
     if len(values) == len(schema['types']):
@@ -89,7 +89,7 @@ def delete(table, condition, buf):
     if table in schemas:
         schema = schemas[table]
     else:
-        raise MiniSQLError('table {} does not exit'.format(table))
+        raise MiniSQLError('table {} does not exist'.format(table))
     schema_cols = schema['cols']
     schema_types = schema['types']
 
@@ -133,7 +133,7 @@ def select(cols, table, condition, buf):
     if table in schemas:
         schema = schemas[table]
     else:
-        raise MiniSQLError('table {} does not exit'.format(table))
+        raise MiniSQLError('table {} does not exist'.format(table))
     schema_cols = schema['cols']
     schema_types = schema['types']
     index = schema['index']

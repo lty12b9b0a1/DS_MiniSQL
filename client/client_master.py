@@ -81,7 +81,7 @@ while True:
                 ret_master_url = requests.get(curator_url + "/getMaster", timeout=1)
                 try:
                     master_url = eval(ret_master_url.text)
-                    print(master_url)
+                    # print(master_url)
                 except Exception as e:
                     print("wrong master address from curator server")
             if querytype == MiniSQLType.SELECT:
@@ -116,7 +116,7 @@ while True:
                 try:
                     ret = requests.get("http://" + master_url + "/wquery", params=formdata)
                     query_success = 1
-                    print("content:", eval(ret.content))
+                    # print("content:", eval(ret.content))
                     if eval(ret.content) == 1:
                         print("change success!")
                     else:
