@@ -11,9 +11,9 @@ block_path = './DB/memory/{}.block'
 block_dir = './DB/memory'
 header_path = './DB/memory/header.hd'
 
-BLOCK_SIZE = 4 * 256 * 1024
-TOTAL_BLOCK = 1
-TOTAL_BLOCK_IN_BUFFER = 1
+BLOCK_SIZE = 1 * 128 * 1024
+TOTAL_BLOCK = 20
+TOTAL_BLOCK_IN_BUFFER = 10
 
 
 TREE_ORDER = 10

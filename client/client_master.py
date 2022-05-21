@@ -81,6 +81,7 @@ while True:
                 ret_master_url = requests.get(curator_url + "/getMaster", timeout=1)
                 try:
                     master_url = eval(ret_master_url.text)
+                    print(master_url)
                 except Exception as e:
                     print("wrong master address from curator server")
             if querytype == MiniSQLType.SELECT:
@@ -91,6 +92,21 @@ while True:
                     try:
                         ret = requests.get("http://" + region_url + "/query_broadcast", params=formdata)
                         query_success = 1
+                        tmp = eval(ret.content.strip())
+                        # print(tmp)
+                        if tmp == 0:
+                            master_url = ""
+                            break
+                        elif isinstance(tmp, (list, tuple)):
+                            # print(*(ret.content))
+                            if len(tmp) == 1:
+                                master_url = ""
+                                print(tmp[0])
+                            else:
+                                print_table(tmp[0], tmp[1])
+                        else:
+                            master_url = ""
+                            print(tmp[0])
                     except Exception as e:
                         print("query failed, please try again.")
                 except Exception as e:
@@ -100,30 +116,20 @@ while True:
                 try:
                     ret = requests.get("http://" + master_url + "/wquery", params=formdata)
                     query_success = 1
+                    print("content:", eval(ret.content))
+                    if eval(ret.content) == 1:
+                        print("change success!")
+                    else:
+                        print("change fail!")
                 except Exception as e:
                     print("query failed, please try again.")
             else:
                 raise TypeError("Syntax Error: Unrecognised Type")
             
             if query_success == 1:
-                tmp = eval(ret.content.strip())
-                # print(tmp)
-                if tmp == 0:
-                    master_url = ""
-                    break
-                elif isinstance(tmp, (list, tuple)):
-                    # print(*(ret.content))
-                    if len(tmp) == 1:
-                        master_url = ""
-                        print(tmp[0])
-                    else:
-
-                        print(len(tmp))
-                        print_table(tmp[0], tmp[1])
-                else:
-                    master_url = ""
-                    print(tmp[0])
+                1
             else:
+                master_url = ""
                 print("something error during execute")
 
         except TypeError as e:

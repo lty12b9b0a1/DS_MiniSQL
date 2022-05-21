@@ -2,7 +2,8 @@ from enum import Enum
 from glob import glob
 import requests
 from threading import Lock, Thread, Event
-
+from toolkit.compress import compress_file
+from toolkit.decompress import decompress
 
 from execption import MiniSQLSyntaxError
 from API import *
@@ -159,25 +160,12 @@ def synchronize_q():
     synchronize(ip_port)
 
 def synchronize(ip_port):
-    url = "http://"+ ip_port + "/testfile0"
+    url = "http://"+ ip_port + "/file_ts"
     ret = requests.get(url)
-    with open("./DB/memory/0.block", "wb") as f:
+    with open("./tmp.zip", "wb") as f:
         f.write(ret.content)
-
-    url = "http://"+ ip_port + "/testfile1"
-    ret = requests.get(url)
-    with open("./DB/memory/header.hd", "wb") as f:
-        f.write(ret.content)
-        
-    url = "http://"+ ip_port + "/testfile2"
-    ret = requests.get(url)
-    with open("./DB/catalog/table_schema.minisql", "wb") as f:
-        f.write(ret.content)
-
-    url = "http://"+ ip_port + "/testfile3"
-    ret = requests.get(url)
-    with open("./DB/log.txt", "wb") as f:
-        f.write(ret.content)
+    
+    decompress("./tmp.zip", "./")
     
     return 1
 
@@ -221,27 +209,10 @@ def signout():
         print(e)
 
 
-@app.route('/testfile0', methods=['get'])
-def testfile0():
-    file = open('./DB/memory/0.block', 'rb')
-    raw = file.read()
-    return Response(raw)
-
-@app.route('/testfile1', methods=['get'])
-def testfile1():
-    file = open('./DB/memory/header.hd', 'rb')
-    raw = file.read()
-    return Response(raw)
-
-@app.route('/testfile2', methods=['get'])
-def testfile2():
-    file = open('./DB/catalog/table_schema.minisql', 'rb')
-    raw = file.read()
-    return Response(raw)
-
-@app.route('/testfile3', methods=['get'])
-def testfile3():
-    file = open('./DB/log.txt', 'rb')
+@app.route('/file_ts', methods=['get'])
+def file_ts():
+    compress_file("./tmp.zip", "./DB")
+    file = open('./tmp.zip', 'rb')
     raw = file.read()
     return Response(raw)
 
@@ -313,14 +284,21 @@ class WqueryThread(Thread):
         global server_list
         global server_lock_list
         global server_real_lock_list
-
-        server_lock_list[i] = 1
+        response = 'f'
+        server_lock_list[self.id] = 1
         server_real_lock_list[self.id].acquire()
         try:
             url = "http://" + self.address + "/query_broadcast"
-            response = requests.get(url=url, params=self.query, timeout=1)
+            response = requests.get(url=url, params={"query": self.query}, timeout=1)
+            # response = reponse.content
+            # print(eval(response.content))
+            response = eval(response.content)[0]
+            # print(eval(response.content))
+            # response = eval(response.content)[0]
+            # print(response)
             # 返回值为数字即视为存活
-            if response.content == 1:
+            if response == '1':
+                # print("okkk")
                 self.update_lock.acquire()
                 self.success.append(self.id)
                 self.update_lock.release()
@@ -330,7 +308,7 @@ class WqueryThread(Thread):
                 self.update_lock.release()
 
         except Exception as e:
-            print(e)
+            # print(e)
             self.update_lock.acquire()
             self.failed.append(self.id)
             self.update_lock.release()
@@ -341,18 +319,19 @@ class WqueryThread(Thread):
             self.update_lock.release()
         
         self.lock.wait()
-        
-        if response.content == 1 and len(self.success) < W_SUCCESS_THRESHOLD:
+        # print("snum = ", len(self.success))
+        if response == '1' and len(self.success) < W_SUCCESS_THRESHOLD:
             formdata = {"ip_port": server_list[self.failed[0]]["address"]}
             url = "http://" + self.address + "/synchronize_q"
             response = requests.get(url=url, params=formdata, timeout=1)
-        if response.content == 0 and len(self.success) >= W_SUCCESS_THRESHOLD:
+        if response != '1' and len(self.success) >= W_SUCCESS_THRESHOLD:
             formdata = {"ip_port": server_list[self.success[0]]["address"]}
             url = "http://" + self.address + "/synchronize_q"
             response = requests.get(url=url, params=formdata, timeout=1)
         
         server_lock_list[self.id] = 0
         server_real_lock_list[self.id].release()
+        return
 
 
 write_lock = Lock()
@@ -366,7 +345,7 @@ def wquery():
     if ismaster() == 0:
         return jsonify("master changed!")
     query = request.args.get('query')
-    print(query)
+    # print(query)
     global server_list
     global server_lock_list
     write_lock.acquire()
@@ -374,11 +353,12 @@ def wquery():
     finish.clear()
     update_lock = Lock()
     for i in range(len(server_list)):
-        pulse_thread = WqueryThread(server_list[i]["address"], query, finish, success_num, failed_num, update_lock)
+        pulse_thread = WqueryThread(i, query, server_list[i]["address"], finish, success_num, failed_num, update_lock)
         pulse_thread.start()
     
     finish.wait()
     write_lock.release()
+    print("query success num when finished changes : ", len(success_num))
     if len(success_num) >= W_SUCCESS_THRESHOLD:
         return "1"
     else:
@@ -390,16 +370,14 @@ def query_broadcast():
     query = request.args.get('query')
     print(query)
     try:
-        beg = time.clock()
+        # beg = time.clock()
         ret = interpret(query, buf)
-        end = time.clock()
-        print(ret)
+        # end = time.clock()
+        # print(ret)
+        return jsonify(ret)
+        
     except MiniSQLError as e:
         return jsonify(e.args)
-    query = ''
-
-    # print('use time {}s'.format(end - beg))
-    return jsonify(ret)
 
 @app.route('/testsleep')
 def testsleep():

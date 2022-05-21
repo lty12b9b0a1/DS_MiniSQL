@@ -25,3 +25,34 @@ table people all ready exits
 table people all ready exits
 table people all ready exits
 drop table people
+select from student
+select from student
+select from student
+select from student
+select from student
+select from student
+select from student
+select from student
+create people schema ['ID', 'name', 'age', 'height'] with ['char(20)', 'char(20)', 'int', 'float'], primary_key=ID
+create people2 schema ['ID', 'name', 'age', 'height'] with ['char(20)', 'char(20)', 'int', 'float'], primary_key=ID
+create people3 schema ['ID', 'name', 'age', 'height'] with ['char(20)', 'char(20)', 'int', 'float'], primary_key=ID
+create people4 schema ['ID'] with ['char(20)'], primary_key=ID
+create people5 schema ['ID'] with ['char(20)'], primary_key=ID
+create people6 schema ['ID'] with ['char(20)'], primary_key=ID
+create people7 schema ['ID'] with ['char(20)'], primary_key=ID
+create people8 schema ['ID'] with ['char(20)'], primary_key=ID
+create people9 schema ['ID'] with ['char(20)'], primary_key=ID
+create people10 schema ['ID'] with ['char(20)'], primary_key=ID
+create people11 schema ['ID'] with ['char(20)'], primary_key=ID
+create people12 schema ['ID'] with ['char(20)'], primary_key=ID
+create people13 schema ['ID'] with ['char(20)'], primary_key=ID
+create people14 schema ['ID'] with ['char(20)'], primary_key=ID
+create people15 schema ['ID'] with ['char(20)'], primary_key=ID
+select from student
+create people16 schema ['ID'] with ['char(20)'], primary_key=ID
+create people17 schema ['ID'] with ['char(20)'], primary_key=ID
+select from student
+select from student
+select from student
+create index sid
+create index pid

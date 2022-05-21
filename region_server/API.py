@@ -39,6 +39,7 @@ def create_table(query):
             raise MiniSQLError('Multiple primary keys')
         else:
             catalog.create_table(table.strip(), cols, types, key, uniques)
+            return "1"
             # record.create_table(table, cols, types, key)
     else:
         raise MiniSQLSyntaxError('''Syntax Error in '{}' '''.format(query))
@@ -52,6 +53,7 @@ def create_index(query, buf):
         table = match.group(2).strip()
         col = match.group(3).strip()
         catalog.create_index(index_name, table, col, buf)
+        return "1"
     else:
         raise MiniSQLSyntaxError('''Syntax Error in '{}' '''.format(query))
 
@@ -65,6 +67,7 @@ def insert(query, buf):
         for v in match.group(2).split(','):
             values.append(v.strip())
         record.insert(table, values, buf)
+        return "1"
     else:
         raise MiniSQLSyntaxError('''Syntax Error in '{}' '''.format(query))
 
@@ -102,6 +105,7 @@ def delete(query, buf):
         else:
             raise MiniSQLSyntaxError('Syntax Error in select')
     record.delete(table.strip(), condition, buf)
+    return "1"
 
 
 def drop_table(query, buf):
@@ -111,6 +115,7 @@ def drop_table(query, buf):
         table = match.group(1).strip()
         # record.drop_table(table)
         catalog.drop_table(table, buf)
+        return "1"
     else:
         raise MiniSQLSyntaxError('''Syntax Error in '{}' '''.format(query))
 
@@ -121,6 +126,7 @@ def drop_index(query, buf):
     if match:
         index_name = match.group(1).strip()
         catalog.drop_index(index_name)
+        return "1"
     else:
         raise MiniSQLSyntaxError('''Syntax Error in '{}' '''.format(query))
 

@@ -43,6 +43,7 @@ def get_server():
 @app.route("/signout")
 def signout():
     global write_lock
+    global current_master
     servers = []
     with open("servers.json", "r") as json_file:
         servers = json.load(json_file)
@@ -51,6 +52,7 @@ def signout():
             del servers[servers.index({"address": address, "isMaster": False})]
         if {"address": address, "isMaster": True} in servers:
             del servers[servers.index({"address": address, "isMaster": True})]
+            current_master = None
     write_lock.acquire()
     with open("servers.json", "w") as json_file:
         json.dump(servers, json_file)
