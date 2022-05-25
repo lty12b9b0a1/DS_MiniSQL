@@ -17,7 +17,7 @@ build up(with conda)：
 
    $conda install pip (if pip is not installed before)
 
-   $pip install -r requirements
+   $pip install -r requirements.txt
 
 4. launch the servers.
 
@@ -45,7 +45,7 @@ build up(without conda)：
 
  1. install the requirements:
 
-    $ pip install -r requirements
+    $ pip install -r requirements.txt
 
  2. launch the servers.
 
