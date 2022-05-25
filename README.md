@@ -18,3 +18,110 @@ region_server主节点写入操作：暂定为   client写入->主节点给所�
 - [x] http通信的传入值和返回值的格式问题：eval函数的使用。
 
 - [x] http通信的阻塞模式和异步模式
+
+## 四、MiniSQL系统测试
+
+### 4.1 创建表
+
+``` mysql
+create table people (
+    ID char(20),
+    name char(20),
+    age int,
+    height float,
+    primary key (ID)
+);
+```
+
+
+### 4.2 插入记录
+
+``` mysql
+insert into people values (
+    3150659278,
+    'dong',
+    20,
+    177.5
+);
+
+insert into people values (
+    3191115278,
+    'han',
+    22,
+    187.5
+);
+
+insert into people values (
+    3191118888,
+    'chen',
+    19,
+    187.5
+);
+
+insert into people values (
+    3179615278,
+    'wei',
+    18,
+    187.5
+);
+```
+
+
+
+### 4.3 选择记录 
+
+``` mysql
+select * from people;  # 无条件查找
+
+select * from people  # 有条件查找
+    where age > 20;
+```
+
+
+### 4.4 删除记录
+
+``` mysql
+delete from people where age > 20;  # 条件删除
+delete from people;  # 无条件删除
+```
+
+
+### 4.5 创建索引
+
+``` mysql
+create index sid on people (ID);
+```
+
+
+### 4.6 删除索引
+
+``` mysql
+drop index sid;
+```
+
+
+### 4.7 删除表
+
+``` mysql
+drop table people;
+```
+
+
+### 4.8 执行SQL脚本文件
+
+``` mysql
+execfile test/test.sql;
+```
+
+
+### 4.9 退出MiniSQL
+
+``` mysql
+quit;
+```
+
+
+``` mysql
+exit;
+```
+
