@@ -71,12 +71,7 @@ create table people (
 ### 插入记录
 
 ``` mysql
-insert into people values (
-    3150659278,
-    'dong',
-    20,
-    177.5
-);
+insert into people values (3150659278, 'dong', 20, 177.5);
 
 insert into people values (
     3191115278,
