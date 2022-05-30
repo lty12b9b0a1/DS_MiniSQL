@@ -1,7 +1,10 @@
-from doctest import master
+from ast import expr_context
 from enum import Enum
-from operator import le
+import json
 import requests
+
+
+
 
 MiniSQLType = Enum('MiniSQLType', ('CREATE_TABLE', 'INSERT', 'DROP_TABLE', 'CREATE_INDEX',
                                    'DROP_INDEX', 'SELECT', 'DELETE', 'QUIT', 'EXECFILE', 'CLEAR', 'ERROR_TYPE'))
@@ -55,6 +58,7 @@ curator_url = "http://127.0.0.1:5000"
 
 query = ''
 master_url = ""
+leader_url = ""
 while True:
     print('MiniSQL->', end=' ')
     cmd = input()
@@ -77,44 +81,58 @@ while True:
             if querytype == MiniSQLType.QUIT:
                 break
 
-            if master_url == "":
-                ret_master_url = requests.get(curator_url + "/getMaster", timeout=1)
+            if leader_url == "":
                 try:
-                    master_url = eval(ret_master_url.text)
+                    ret_leader_url = requests.get(curator_url + "/getLeader", timeout=1)
+                    leader_url = eval(ret_leader_url.text)
                     # print(master_url)
                 except Exception as e:
-                    print("wrong master address from curator server")
+                    print("wrong leader address from curator server")
             if querytype == MiniSQLType.SELECT:
                 try:
-                    ret_region = requests.get("http://" + master_url + "/selectregion", timeout=1)
-                    ret_region_json = ret_region.json()
-                    region_url = ret_region_json['address']
+                    ret_master = requests.get("http://" + leader_url + "/selectmaster", params=formdata, timeout=1)
                     try:
-                        ret = requests.get("http://" + region_url + "/query_broadcast", params=formdata)
-                        query_success = 1
-                        tmp = eval(ret.content.strip())
-                        # print(tmp)
-                        if tmp == 0:
-                            master_url = ""
-                            break
-                        elif isinstance(tmp, (list, tuple)):
-                            # print(*(ret.content))
-                            if len(tmp) == 1:
-                                master_url = ""
-                                print(tmp[0])
-                            else:
-                                print_table(tmp[0], tmp[1])
-                        else:
-                            master_url = ""
-                            print(tmp[0])
+                        if eval(ret_master.content) == 0:
+                            print("syntax error!")
+                        elif eval(ret_master.content) == 1:
+                            print("can not found suitable master server!")
                     except Exception as e:
-                        print("query failed, please try again.")
+                        ret_master_json = ret_master.json()
+                        master_url = ret_master_json['address']
+                        try:
+                            ret_region = requests.get("http://" + master_url + "/selectregion", timeout=1)
+                            ret_region_json = ret_region.json()
+                            region_url = ret_region_json['address']
+                            try:
+                                ret = requests.get("http://" + region_url + "/query_broadcast", params=formdata)
+                                query_success = 1
+                                tmp = eval(ret.content.strip())
+                                # print(tmp)
+                                if tmp == 0:
+                                    leader_url = ""
+                                    break
+                                elif isinstance(tmp, (list, tuple)):
+                                    # print(*(ret.content))
+                                    if len(tmp) == 1:
+                                        leader_url = ""
+                                        print(tmp[0])
+                                    else:
+                                        print_table(tmp[0], tmp[1])
+                                else:
+                                    leader_url = ""
+                                    print(tmp[0])
+                            except Exception as e:
+                                print("query failed, please try again.")
+                        except Exception as e:
+                            print("get region address failed, please try again.")
                 except Exception as e:
-                    print("get region address failed, please try again.")
-
-            elif querytype != MiniSQLType.ERROR_TYPE:
+                    leader_url = ""
+                    print(e)
+                    print("get master address failed, please try again")
+            elif querytype == MiniSQLType.CLEAR:
                 try:
-                    ret = requests.get("http://" + master_url + "/wquery", params=formdata)
+                    # print("hello?", master_url)
+                    ret = requests.get("http://" + leader_url+ "/clear", params=formdata, timeout=1)
                     query_success = 1
                     # print("content:", eval(ret.content))
                     if eval(ret.content) == 1:
@@ -122,7 +140,36 @@ while True:
                     else:
                         print("change fail!")
                 except Exception as e:
-                    print("query failed, please try again.")
+                    leader_url = ""
+                    print("query failed in master, please try again.")
+            elif querytype != MiniSQLType.ERROR_TYPE:
+                try:
+                    ret_master = requests.get("http://" + leader_url + "/selectmaster", params=formdata, timeout=1)
+                    try:
+                        if eval(ret_master.content) == 0:
+                            print("syntax error!")
+                        elif eval(ret_master.content) == 1:
+                            print("can not found suitable master server!")
+                    except Exception as e:
+                        ret_master_json = ret_master.json()
+                        master_url = ret_master_json['address']
+                        
+                        try:
+                            # print("hello?", master_url)
+                            print(master_url)
+                            ret = requests.get("http://" + master_url + "/wquery", params=formdata, timeout=1)
+                            query_success = 1
+                            print(ret.content)
+                            # print("content:", eval(ret.content))
+                            if eval(ret.content) == 1:
+                                print("change success!")
+                            else:
+                                print("change fail!")
+                        except Exception as e:
+                            print("query failed in master, please try again.")
+                except Exception as e:
+                    leader_url = ""
+                    print("query failed in leader, please try again.")
             else:
                 raise TypeError("Syntax Error: Unrecognised Type")
             

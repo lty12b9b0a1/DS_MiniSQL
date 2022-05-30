@@ -17,7 +17,10 @@ log.setLevel(logging.ERROR)
 app = Flask(__name__)
 CORS(app, supports_credentials=True)
 new_servers = []
-current_master = None
+table_region_list = []
+index_region_list = []
+current_master = []
+current_leader = None
 write_lock = Lock()
 
 
@@ -25,6 +28,11 @@ write_lock = Lock()
 def hello_world():
     print(request.remote_addr)
     return "<p>hello,world!<p>"
+
+
+@app.route("/getLeader")
+def get_Leader():
+    return json.dumps(current_leader)
 
 
 # 通过此接口获取主节点，格式为"ip:port"
@@ -45,20 +53,35 @@ def get_server():
 def signout():
     global write_lock
     global current_master
+    global current_leader
     servers = []
     with open("servers.json", "r") as json_file:
         servers = json.load(json_file)
         address = request.args.get("ip_port")
-        if {"address": address, "isMaster": False} in servers:
-            del servers[servers.index({"address": address, "isMaster": False})]
-        if {"address": address, "isMaster": True} in servers:
-            del servers[servers.index({"address": address, "isMaster": True})]
-            current_master = None
+        region = request.args.get("region")
+        if {"address": address, "isMaster": False, "isLeader": False, "region": region} in servers:
+            del servers[servers.index({"address": address, "isMaster": False, "isLeader": False, "region": region})]
+        if {"address": address, "isMaster": True, "isLeader": False, "region": region} in servers:
+            del servers[servers.index({"address": address, "isMaster": True, "isLeader": False, "region": region})]
+            for i in range(len(current_master)):
+                if current_master[i]["region"] == region:
+                    current_master[i]["master"] = None
+                    break
+            # current_master = None
+        if {"address": address, "isMaster": True, "isLeader": True, "region": region} in servers:
+            del servers[servers.index({"address": address, "isMaster": True, "isLeader": True, "region": region})]
+            for i in range(len(current_master)):
+                if current_master[i]["region"] == region:
+                    current_master[i]["master"] = None
+                    break
+            # current_master = None
+            current_leader = None
+            
     write_lock.acquire()
     with open("servers.json", "w") as json_file:
         json.dump(servers, json_file)
     write_lock.release()
-    print("节点登出:", address)
+    print("节点登出:", address, "region:", region)
     return json.dumps(servers)
 
 
@@ -66,51 +89,85 @@ def signout():
 @app.route("/register")
 def server_online():
     global write_lock
+    global current_master
     with open("servers.json", "r") as json_file:
         servers = json.load(json_file)
         address = request.args.get("ip_port")
-        servers.append({"address": address, "isMaster": False})
+        region = request.args.get("region")
+        servers.append({"address": address, "isMaster": False, "isLeader": False, "region": region})
     write_lock.acquire()
     with open("servers.json", "w") as json_file:
         json.dump(servers, json_file)
     write_lock.release()
-    print("新节点注册:", address)
+
+
+    tmpfind = 0
+    
+    for i in range(len(current_master)):
+        if current_master[i]["region"] == region:
+            tmpfind = 1
+            break
+    
+    if tmpfind == 0:
+        current_master.append({"master": None, "region": region})
+
+
+    print("新节点注册:", address, "region:", region)
     return json.dumps(servers)
 
 
 # 向对应节点发送请求验证其是否存活
 class PulseThread(Thread):
-    def __init__(self, is_master, address, lock):
+    def __init__(self, is_master, is_leader, address, region, lock):
         super(PulseThread, self).__init__()
         self.is_master = is_master
         self.address = address
         self.lock = lock
+        self.is_leader = is_leader
+        self.region = region
 
     def run(self):
         global new_servers
         global current_master
+        global current_leader
+        global table_region_list
+        global index_region_list
         try:
             url = "http://" + self.address + "/heartbeat"
             with open("servers.json", "r") as json_file:
                 # 注意此处传递字典的值为字典列表，需要序列化
-                servers = {"server_list": json.dumps(json.load(json_file))}
+                servers = {"server_list": json.dumps(json.load(json_file)), "table_region_list": json.dumps(table_region_list), "index_region_list": json.dumps(index_region_list)}
             response = requests.get(url=url, params=servers, timeout=2)
             # 返回值为数字即视为存活
             if response.content.decode("utf-8").isdigit():
-                new_server = {"address": self.address, "isMaster": self.is_master}
-                self.lock.acquire()
-                new_servers.append(new_server)
-                self.lock.release()
+                1
+            else:
+                print(response.content)
+                tmprs = json.loads(response.content)
+                table_region_list = tmprs["tablelist"]
+                index_region_list = tmprs["indexlist"]
+            new_server = {"address": self.address, "isMaster": self.is_master, "isLeader": self.is_leader, "region": self.region}
+            self.lock.acquire()
+            new_servers.append(new_server)
+            self.lock.release()
         except Exception as e:
             print(e)
             if self.is_master:
-                current_master = None
+                for i in range(len(current_master)):
+                    if current_master[i]["region"] == self.region:
+                        current_master[i]["master"] = None
+                        break
+                # current_master = None
+            if self.is_leader:
+                current_leader = None
 
 
 # 向所有记录中的节点发送请求等待响应，每个节点启动一个PulseThread线程
 def pulse():
     global new_servers
     global current_master
+    global current_leader
+
     global write_lock
     new_servers = []
     thread_list = []
@@ -119,18 +176,29 @@ def pulse():
         lock = Lock()
         for server in servers:
             is_master = server["isMaster"]
+            is_leader = server["isLeader"]
             address = server["address"]
-            pulse_thread = PulseThread(is_master, address, lock)
+            region = server["region"]
+            pulse_thread = PulseThread(is_master, is_leader, address, region, lock)
             pulse_thread.start()
             thread_list.append(pulse_thread)
         for thread in thread_list:
             thread.join()
         # 当前无主节点时选择新的主节点：new_servers列表中的第一个节点
-        if current_master is None and len(new_servers) > 0:
+        for i in range(len(current_master)):           
+            if current_master[i]["master"] == None and len(new_servers) > 0:
+                for server in new_servers:
+                    if server["region"] == current_master[i]["region"]:
+                        server["isMaster"] = True
+                        current_master[i]["master"] = server["address"]
+                        break
+        if current_leader is None and len(new_servers) > 0:
             for server in new_servers:
-                server["isMaster"] = True
-                current_master = server["address"]
-                break
+                if server["isMaster"] == True: 
+                    server["isLeader"] = True
+                    current_leader = server["address"]
+                    break
+
         print("当前的节点列表：" + str(new_servers))
     write_lock.acquire()
     with open("servers.json", "w") as json_file:

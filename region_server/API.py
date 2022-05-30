@@ -143,7 +143,7 @@ def clear_all(buf):
             os.remove(os.path.join(d, path))
 
     buf = Buffer()
-    return buf
+    return "1"
 
 
 if __name__ == '__main__':

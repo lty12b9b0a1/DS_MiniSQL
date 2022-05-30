@@ -75,3 +75,48 @@ select from people
 drop index sid
 create index sid
 drop index sid
+select from people
+select from people
+select from people
+select from people
+select from people
+select from people
+select from people
+select from people
+select from people
+select from people
+select from people
+select from people
+create t schema ['name', 'age', 'salary'] with ['char(5)', 'int', 'float'], primary_key=name
+create t1 schema ['name'] with ['char(5)'], primary_key=name
+select from t1
+select from t
+select from t1
+select from t
+select from t
+drop table t
+create t schema ['name', 'age', 'salary'] with ['char(5)', 'int', 'float'], primary_key=name
+select from t
+select from t
+drop table t
+create t schema ['name', 'age', 'salary'] with ['char(5)', 'int', 'float'], primary_key=name
+select from t
+select from t
+select from t
+select from t
+select from t
+select from t
+select from t
+select from t
+select from t
+select from t
+select from t
+select from t
+select from t
+select from t
+select from t
+select from t
+create index sid
+drop index sid
+create t schema ['name', 'age', 'salary'] with ['char(5)', 'int', 'float'], primary_key=name
+select from t
