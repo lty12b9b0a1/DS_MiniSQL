@@ -1,6 +1,4 @@
 from enum import Enum
-from glob import glob
-from http import server
 import requests
 from threading import Lock, Thread, Event
 from toolkit.compress import compress_file
@@ -175,7 +173,7 @@ def synchronize(ip_port):
     
     decompress("./tmp.zip", "./")
     
-    
+
     return 1
 
 

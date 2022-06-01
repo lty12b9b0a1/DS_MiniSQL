@@ -54,7 +54,7 @@ def print_table(records, cols):
 
 url = "http://127.0.0.1:23333/query"
 
-curator_url = "http://127.0.0.1:5000"
+curator_url = "127.0.0.1:5000"
 
 query = ''
 master_url = ""
@@ -83,7 +83,7 @@ while True:
 
             if leader_url == "":
                 try:
-                    ret_leader_url = requests.get(curator_url + "/getLeader", timeout=1)
+                    ret_leader_url = requests.get("http://" + curator_url + "/getLeader", timeout=1)
                     leader_url = eval(ret_leader_url.text)
                     # print(master_url)
                 except Exception as e:

@@ -120,3 +120,5 @@ create index sid
 drop index sid
 create t schema ['name', 'age', 'salary'] with ['char(5)', 'int', 'float'], primary_key=name
 select from t
+create test schema ['xx'] with ['int'], primary_key=xx
+create test schema ['xx'] with ['int'], primary_key=xx

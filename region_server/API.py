@@ -133,9 +133,9 @@ def drop_index(query, buf):
 
 def clear_all(buf):
     buf.close()
-
+    open(table_schema_file, 'wb')
     os.remove(table_schema_file)
-
+    open(table_schema_file, 'wb')
     dirs = ['DB/index', 'DB/memory']
 
     for d in dirs:
