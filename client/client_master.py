@@ -81,13 +81,14 @@ while True:
             if querytype == MiniSQLType.QUIT:
                 break
 
-            if leader_url == "":
-                try:
-                    ret_leader_url = requests.get("http://" + curator_url + "/getLeader", timeout=1)
-                    leader_url = eval(ret_leader_url.text)
-                    # print(master_url)
-                except Exception as e:
-                    print("wrong leader address from curator server")
+            # if leader_url == "":
+            try:
+                ret_leader_url = requests.get("http://" + curator_url + "/getLeader", timeout=1)
+                leader_url = eval(ret_leader_url.text)
+                # print(master_url)
+            except Exception as e:
+                print("wrong leader address from curator server")
+
             if querytype == MiniSQLType.SELECT:
                 try:
                     ret_master = requests.get("http://" + leader_url + "/selectmaster", params=formdata, timeout=1)
