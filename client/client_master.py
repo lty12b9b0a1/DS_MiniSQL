@@ -52,8 +52,6 @@ def print_table(records, cols):
     print(bound)
 
 
-url = "http://127.0.0.1:23333/query"
-
 curator_url = "127.0.0.1:5000"
 
 query = ''

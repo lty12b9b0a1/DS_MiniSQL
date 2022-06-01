@@ -212,7 +212,7 @@ class AppThread(Thread):
         super().__init__()
 
     def run(self):
-        app.run(host="127.0.0.1", port=5000)
+        app.run(host="0.0.0.0", port=5000)
 
 
 # 心跳检测线程
