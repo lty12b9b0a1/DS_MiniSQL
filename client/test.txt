@@ -1,0 +1,124 @@
+create table stu_info (ID char(20), name char(20), age int, height float, primary key (ID));
+insert into stu_info values (3150659278, 'dong', 20, 177.5);
+insert into stu_info values (3150659279, 'wang', 19, 187.7);
+insert into stu_info values (3150659210, 'li', 17, 180.5);
+insert into stu_info values (3150659211, 'zhou', 18, 181.2);
+insert into stu_info values (3150659212, 'liu', 21, 175.3);
+select * from stu_info;
+select * from stu_info where age>=19;
+delete from stu_info where age = 17;
+select * from stu_info;
+create index sid on stu_info (ID);
+select * from stu_info;
+drop index sid;
+drop table stu_info;
+select * from stu_info;
+
+
+create table test_table1 (xx int, primary key (xx));
+insert into test_table1 values (1);
+insert into test_table1 values (2);
+insert into test_table1 values (3);
+insert into test_table1 values (4);
+insert into test_table1 values (5);
+insert into test_table1 values (6);
+select * from test_table1;
+
+create table test_table2 (xx int, primary key (xx));
+insert into test_table2 values (1);
+insert into test_table2 values (2);
+insert into test_table2 values (3);
+insert into test_table2 values (4);
+insert into test_table2 values (5);
+insert into test_table2 values (6);
+select * from test_table2;
+
+create table test_table3 (xx int, primary key (xx));
+insert into test_table3 values (1);
+insert into test_table3 values (2);
+insert into test_table3 values (3);
+insert into test_table3 values (4);
+insert into test_table3 values (5);
+insert into test_table3 values (6);
+select * from test_table3;
+
+create table test_table3 (xx int, primary key (xx));
+insert into test_table3 values (1);
+insert into test_table3 values (2);
+insert into test_table3 values (3);
+insert into test_table3 values (4);
+insert into test_table3 values (5);
+insert into test_table3 values (6);
+select * from test_table3;
+
+create table test_table4 (xx int, primary key (xx));
+insert into test_table4 values (1);
+insert into test_table4 values (2);
+insert into test_table4 values (3);
+insert into test_table4 values (4);
+insert into test_table4 values (5);
+insert into test_table4 values (6);
+select * from test_table4;
+
+create table test_table5 (xx int, primary key (xx));
+insert into test_table5 values (1);
+insert into test_table5 values (2);
+insert into test_table5 values (3);
+insert into test_table5 values (4);
+insert into test_table5 values (5);
+insert into test_table5 values (6);
+select * from test_table5;
+
+create table test_table5 (xx int, primary key (xx));
+insert into test_table5 values (1);
+insert into test_table5 values (2);
+insert into test_table5 values (3);
+insert into test_table5 values (4);
+insert into test_table5 values (5);
+insert into test_table5 values (6);
+select * from test_table5;
+
+create table test_table6 (xx int, primary key (xx));
+insert into test_table6 values (1);
+insert into test_table6 values (2);
+insert into test_table6 values (3);
+insert into test_table6 values (4);
+insert into test_table6 values (5);
+insert into test_table6 values (6);
+select * from test_table6;
+
+create table test_table5 (xx int, primary key (xx));
+insert into test_table5 values (1);
+insert into test_table5 values (2);
+insert into test_table5 values (3);
+insert into test_table5 values (4);
+insert into test_table5 values (5);
+insert into test_table5 values (6);
+select * from test_table5;
+
+create table test_table7 (xx int, primary key (xx));
+insert into test_table7 values (1);
+insert into test_table7 values (2);
+insert into test_table7 values (3);
+insert into test_table7 values (4);
+insert into test_table7 values (5);
+insert into test_table7 values (6);
+select * from test_table7;
+
+create table test_table8 (xx int, primary key (xx));
+insert into test_table8 values (1);
+insert into test_table8 values (2);
+insert into test_table8 values (3);
+insert into test_table8 values (4);
+insert into test_table8 values (5);
+insert into test_table8 values (6);
+select * from test_table8;
+
+create table test_table9 (xx int, primary key (xx));
+insert into test_table9 values (1);
+insert into test_table9 values (2);
+insert into test_table9 values (3);
+insert into test_table9 values (4);
+insert into test_table9 values (5);
+insert into test_table9 values (6);
+select * from test_table9;
